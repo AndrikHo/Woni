@@ -220,18 +220,21 @@ class PlannerItem {
     required this.text,
     required this.createdAt,
     this.isDone = false,
+    this.isStarred = false,
   });
 
   final String id;
   final String text;
   final DateTime createdAt;
   final bool isDone;
+  final bool isStarred;
 
-  PlannerItem copyWith({String? text, bool? isDone}) => PlannerItem(
+  PlannerItem copyWith({String? text, bool? isDone, bool? isStarred}) => PlannerItem(
         id: id,
         text: text ?? this.text,
         createdAt: createdAt,
         isDone: isDone ?? this.isDone,
+        isStarred: isStarred ?? this.isStarred,
       );
 }
 
@@ -245,6 +248,7 @@ class ExpenseCategory {
     required this.color,
     required this.korName,
     this.isFixed = false,
+    this.fixedAmount,
     List<ExpenseSubcategory>? subcategories,
   }) : subcategories = subcategories ?? [];
 
@@ -254,7 +258,30 @@ class ExpenseCategory {
   final Color color;
   final String korName;
   final bool isFixed;
+  final int? fixedAmount; // null = normal category, non-null = auto-included monthly
   final List<ExpenseSubcategory> subcategories;
+
+  ExpenseCategory copyWith({
+    String? name,
+    String? emoji,
+    Color? color,
+    String? korName,
+    bool? isFixed,
+    int? fixedAmount,
+    bool clearFixedAmount = false,
+    List<ExpenseSubcategory>? subcategories,
+  }) {
+    return ExpenseCategory(
+      id: id,
+      name: name ?? this.name,
+      emoji: emoji ?? this.emoji,
+      color: color ?? this.color,
+      korName: korName ?? this.korName,
+      isFixed: isFixed ?? this.isFixed,
+      fixedAmount: clearFixedAmount ? null : (fixedAmount ?? this.fixedAmount),
+      subcategories: subcategories ?? this.subcategories,
+    );
+  }
 }
 
 class ExpenseSubcategory {
@@ -269,13 +296,21 @@ class ExpenseSubcategory {
   final String korName;
 }
 
+// ─── CARRY-OVER MODE ─────────────────────────────────────────────────────────
+
+enum CarryOverMode { auto, manual, byBillingDate }
+
+// ─── PAY MODE ────────────────────────────────────────────────────────────────
+
+enum PayMode { hourly, fixedMonthly, fixedDaily, manualDaily }
+
 // ─── SHIFT PRESETS ───────────────────────────────────────────────────────────
 
 class ShiftPreset {
   const ShiftPreset({
     required this.id,
     required this.name,
-    required this.emoji,
+    this.emoji = '',
     required this.color,
     required this.defaultStart,
     required this.defaultEnd,
@@ -287,6 +322,8 @@ class ShiftPreset {
     this.nightBonusEnd = const TimeOfDay(hour: 6, minute: 0),
     this.nightMultiplier = 0.5,
     this.fixedDailyAmount,
+    this.payMode = PayMode.hourly,
+    this.fixedMonthlyAmount,
   });
 
   final String id;
@@ -302,7 +339,9 @@ class ShiftPreset {
   final TimeOfDay nightBonusStart;
   final TimeOfDay nightBonusEnd;
   final double nightMultiplier;
-  final int? fixedDailyAmount; // null → show input dialog
+  final int? fixedDailyAmount;
+  final PayMode payMode;
+  final int? fixedMonthlyAmount;
 
   ShiftPreset copyWith({
     String? name,
@@ -319,6 +358,9 @@ class ShiftPreset {
     double? nightMultiplier,
     int? fixedDailyAmount,
     bool clearFixedAmount = false,
+    PayMode? payMode,
+    int? fixedMonthlyAmount,
+    bool clearFixedMonthly = false,
   }) {
     return ShiftPreset(
       id: id,
@@ -335,6 +377,8 @@ class ShiftPreset {
       nightBonusEnd: nightBonusEnd ?? this.nightBonusEnd,
       nightMultiplier: nightMultiplier ?? this.nightMultiplier,
       fixedDailyAmount: clearFixedAmount ? null : (fixedDailyAmount ?? this.fixedDailyAmount),
+      payMode: payMode ?? this.payMode,
+      fixedMonthlyAmount: clearFixedMonthly ? null : (fixedMonthlyAmount ?? this.fixedMonthlyAmount),
     );
   }
 }
@@ -343,27 +387,27 @@ final kDefaultPresets = [
   ShiftPreset(
     id: 'preset_day',
     name: 'Дневная',
-    emoji: '🌅',
     color: const Color(0xFF4F8EF7),
     shiftType: ShiftType.regular,
+    payMode: PayMode.hourly,
     defaultStart: const TimeOfDay(hour: 9, minute: 0),
     defaultEnd: const TimeOfDay(hour: 18, minute: 0),
   ),
   ShiftPreset(
     id: 'preset_night',
     name: 'Ночная',
-    emoji: '🌙',
     color: const Color(0xFFF59E0B),
     shiftType: ShiftType.night,
+    payMode: PayMode.hourly,
     defaultStart: const TimeOfDay(hour: 22, minute: 0),
     defaultEnd: const TimeOfDay(hour: 6, minute: 0),
   ),
   ShiftPreset(
     id: 'preset_overtime',
     name: 'Переработка',
-    emoji: '⏰',
     color: const Color(0xFF7B6EF6),
     shiftType: ShiftType.overtime,
+    payMode: PayMode.hourly,
     defaultStart: const TimeOfDay(hour: 18, minute: 0),
     defaultEnd: const TimeOfDay(hour: 22, minute: 0),
     breakMinutes: 0,

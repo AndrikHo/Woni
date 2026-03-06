@@ -2,12 +2,15 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:woni/core/constants/models.dart';
 import 'package:woni/core/l10n/strings.dart';
+import 'package:woni/core/theme/app_themes.dart';
+import 'package:woni/core/theme/woni_theme.dart';
 
 // ─── APP STATE ──────────────────────────────────────────────────────────────
 
 class AppState extends ChangeNotifier {
   ThemeMode themeMode = ThemeMode.dark;
   AppLocale locale = AppLocale.ru;
+  AppThemeId selectedTheme = AppThemeId.winterSteel;
 
   final List<Transaction> transactions = List.of(kDummyTransactions);
   final List<ShiftEntry> shifts = List.of(kDummyShifts);
@@ -47,6 +50,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setAppTheme(AppThemeId id) {
+    selectedTheme = id;
+    WoniColors.setTheme(themeById(id));
+    notifyListeners();
+  }
+
   // ── Manual income override ─────────────────────────────────────────────
 
   int? manualIncome; // null = use computed from transactions
@@ -56,19 +65,81 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Balance carry-over ────────────────────────────────────────────────
+
+  CarryOverMode carryOverMode = CarryOverMode.auto;
+  int billingDay = 1; // 1-31, used when mode == byBillingDate
+  int? carryOverAmount; // stored carry-over from previous period
+
+  void setCarryOverMode(CarryOverMode mode) {
+    carryOverMode = mode;
+    notifyListeners();
+  }
+
+  void setBillingDay(int day) {
+    billingDay = day.clamp(1, 31);
+    notifyListeners();
+  }
+
+  void setCarryOverAmount(int? amount) {
+    carryOverAmount = amount;
+    notifyListeners();
+  }
+
+  /// Manually trigger carry-over (for manual mode)
+  void triggerManualCarryOver() {
+    carryOverAmount = monthBalance;
+    notifyListeners();
+  }
+
   // ── Computed ────────────────────────────────────────────────────────────
 
-  int get monthIncome => manualIncome ?? transactions
-      .where((t) => t.type == TransactionType.income)
-      .fold(0, (sum, t) => sum + t.amount);
+  int get monthIncome {
+    if (manualIncome != null) return manualIncome!;
+    final txIncome = transactions
+        .where((t) => t.type == TransactionType.income)
+        .fold(0, (sum, t) => sum + t.amount);
+    int base = txIncome + _fixedMonthlyTotal;
 
-  int get monthExpense => transactions
-      .where((t) => t.type == TransactionType.expense)
-      .fold(0, (sum, t) => sum + t.amount);
+    // Add carry-over based on mode
+    if (carryOverAmount != null && carryOverAmount! > 0) {
+      base += carryOverAmount!;
+    }
+
+    return base;
+  }
+
+  int get monthExpense {
+    final txExpense = transactions
+        .where((t) => t.type == TransactionType.expense)
+        .fold(0, (sum, t) => sum + t.amount);
+    final fixedCatTotal = expenseCategories
+        .where((c) => c.fixedAmount != null && c.fixedAmount! > 0)
+        .fold(0, (sum, c) => sum + c.fixedAmount!);
+    return txExpense + fixedCatTotal;
+  }
 
   int get monthBalance => monthIncome - monthExpense;
 
-  int get shiftMonthTotal => shifts.fold(0, (sum, s) => sum + s.totalPay);
+  int get shiftMonthTotal =>
+      shifts.fold(0, (sum, s) => sum + s.totalPay) + _fixedMonthlyTotal;
+
+  /// Sum of fixedMonthly preset amounts (once per preset that has any shift)
+  int get _fixedMonthlyTotal {
+    final monthlyIds = <String>{};
+    for (final s in shifts) {
+      final p = shiftPresets.where((p) => p.id == s.presetId).firstOrNull;
+      if (p != null && p.payMode == PayMode.fixedMonthly) {
+        monthlyIds.add(p.id);
+      }
+    }
+    int total = 0;
+    for (final id in monthlyIds) {
+      final p = shiftPresets.where((p) => p.id == id).firstOrNull;
+      if (p != null) total += p.fixedMonthlyAmount ?? 0;
+    }
+    return total;
+  }
 
   Map<String, int> get categoryTotals {
     final map = <String, int>{};
@@ -94,21 +165,23 @@ class AppState extends ChangeNotifier {
 
   void addShift(ShiftEntry shift) {
     shifts.insert(0, shift);
-    // Auto-create linked income transaction
-    transactions.insert(
-      0,
-      Transaction(
-        id: 'tx_shift_${shift.id}',
-        title:
-            '${S.shifts} · ${_pad(shift.startTime.hour)}:${_pad(shift.startTime.minute)}–${_pad(shift.endTime.hour)}:${_pad(shift.endTime.minute)}',
-        category: 'salary',
-        amount: shift.totalPay,
-        type: TransactionType.income,
-        occurredAt: shift.date,
-        source: TransactionSource.shift,
-        emoji: '💼',
-      ),
-    );
+    // Auto-create linked income transaction (skip for fixedMonthly marker shifts with 0 pay)
+    if (shift.totalPay > 0) {
+      transactions.insert(
+        0,
+        Transaction(
+          id: 'tx_shift_${shift.id}',
+          title:
+              '${S.shifts} · ${_pad(shift.startTime.hour)}:${_pad(shift.startTime.minute)}–${_pad(shift.endTime.hour)}:${_pad(shift.endTime.minute)}',
+          category: 'salary',
+          amount: shift.totalPay,
+          type: TransactionType.income,
+          occurredAt: shift.date,
+          source: TransactionSource.shift,
+          emoji: '💼',
+        ),
+      );
+    }
     notifyListeners();
   }
 
@@ -178,6 +251,40 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void starPlannerItem(String id) {
+    final i = plannerItems.indexWhere((p) => p.id == id);
+    if (i == -1) return;
+    plannerItems[i] = plannerItems[i].copyWith(isStarred: !plannerItems[i].isStarred);
+    // Auto-sort: starred items float to top, preserving relative order within groups
+    _sortPlannerByStarred();
+    notifyListeners();
+  }
+
+  void _sortPlannerByStarred() {
+    final starred = plannerItems.where((p) => p.isStarred).toList();
+    final unstarred = plannerItems.where((p) => !p.isStarred).toList();
+    plannerItems
+      ..clear()
+      ..addAll(starred)
+      ..addAll(unstarred);
+  }
+
+  void editPlannerItem(String id, String text) {
+    final i = plannerItems.indexWhere((p) => p.id == id);
+    if (i == -1) return;
+    plannerItems[i] = plannerItems[i].copyWith(text: text);
+    notifyListeners();
+  }
+
+  void reorderPlannerItems(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || newIndex < 0) return;
+    if (oldIndex >= plannerItems.length || newIndex >= plannerItems.length) return;
+    if (oldIndex == newIndex) return;
+    final item = plannerItems.removeAt(oldIndex);
+    plannerItems.insert(newIndex, item);
+    notifyListeners();
+  }
+
   // ── Expense Categories ─────────────────────────────────────────────────
 
   static const _fixedCategoryIds = {'housing', 'utilities', 'mobile'};
@@ -199,6 +306,12 @@ class AppState extends ChangeNotifier {
 
   void addExpenseCategory(ExpenseCategory cat) {
     expenseCategories.add(cat);
+    notifyListeners();
+  }
+
+  void updateExpenseCategory(ExpenseCategory updated) {
+    final i = expenseCategories.indexWhere((c) => c.id == updated.id);
+    if (i != -1) expenseCategories[i] = updated;
     notifyListeners();
   }
 
@@ -253,6 +366,12 @@ class AppState extends ChangeNotifier {
     shiftPresets
       ..clear()
       ..addAll(kDefaultPresets);
+    selectedTheme = AppThemeId.winterSteel;
+    WoniColors.setTheme(themeById(AppThemeId.winterSteel));
+    carryOverMode = CarryOverMode.auto;
+    billingDay = 1;
+    carryOverAmount = null;
+    manualIncome = null;
     notifyListeners();
   }
 

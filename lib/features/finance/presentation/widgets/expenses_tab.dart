@@ -82,6 +82,47 @@ class _ExpensesTabState extends State<ExpensesTab> {
           ),
         ),
 
+        // ── Total (income - expense) ──────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: WoniSpacing.lg),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : Colors.black.withValues(alpha: 0.03),
+              borderRadius: WoniRadius.sm,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.04),
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  S.totalPay,
+                  style: WoniTextStyles.body.copyWith(
+                    color: isDark ? WoniColors.darkText2 : WoniColors.lightText2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '${fmtKRWFull((state.monthIncome - state.monthExpense).abs())}₩',
+                  style: WoniTextStyles.heading2.copyWith(
+                    color: state.monthIncome >= state.monthExpense
+                        ? (isDark ? WoniColors.greenDark : WoniColors.green)
+                        : (isDark ? WoniColors.coralDark : WoniColors.coral),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+
         // ── Category sections ─────────────────────────────────────────
         Expanded(
           child: SingleChildScrollView(
@@ -100,7 +141,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                     isDark: isDark,
                     onTap: () => setState(() => _expandedCat = _expandedCat == cat.id ? null : cat.id),
                     onRemoveTx: (id) => AppStateScope.read(context).removeTransaction(id),
-                    onRemoveCat: () => AppStateScope.read(context).removeExpenseCategory(cat.id),
+                    onConfigure: () => ExpenseCategorySheet.showEdit(context, category: cat),
                   ),
                 _AddCategoryButton(isDark: isDark, isFixed: true),
                 const SizedBox(height: WoniSpacing.lg),
@@ -116,7 +157,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
                     isDark: isDark,
                     onTap: () => setState(() => _expandedCat = _expandedCat == cat.id ? null : cat.id),
                     onRemoveTx: (id) => AppStateScope.read(context).removeTransaction(id),
-                    onRemoveCat: () => AppStateScope.read(context).removeExpenseCategory(cat.id),
+                    onConfigure: () => ExpenseCategorySheet.showEdit(context, category: cat),
                   ),
                 _AddCategoryButton(isDark: isDark, isFixed: false),
                 const SizedBox(height: WoniSpacing.xxxl),
@@ -213,7 +254,7 @@ class _SumBlock extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${positive ? '+' : '-'}${fmtKRW(value)}₩',
+                '${positive ? '+' : '-'}${fmtKRWFull(value)}₩',
                 style: WoniTextStyles.heading2.copyWith(color: color),
               ),
             ],
@@ -269,7 +310,7 @@ class _CategoryAccordion extends StatelessWidget {
     required this.isDark,
     required this.onTap,
     required this.onRemoveTx,
-    required this.onRemoveCat,
+    required this.onConfigure,
   });
 
   final ExpenseCategory category;
@@ -278,14 +319,19 @@ class _CategoryAccordion extends StatelessWidget {
   final bool isDark;
   final VoidCallback onTap;
   final ValueChanged<String> onRemoveTx;
-  final VoidCallback onRemoveCat;
+  final VoidCallback onConfigure;
 
   @override
   Widget build(BuildContext context) {
-    final total = transactions.fold(0, (sum, t) => sum + t.amount);
+    final txTotal = transactions.fold(0, (sum, t) => sum + t.amount);
+    final displayTotal = (category.fixedAmount != null && category.fixedAmount! > 0)
+        ? category.fixedAmount!
+        : txTotal;
     final textColor = isDark ? WoniColors.darkText1 : WoniColors.lightText1;
     final textColor2 = isDark ? WoniColors.darkText2 : WoniColors.lightText2;
+    final textColor3 = isDark ? WoniColors.darkText3 : WoniColors.lightText3;
     final surface = isDark ? WoniColors.darkSurface : WoniColors.lightSurface;
+    final hasFixed = category.fixedAmount != null && category.fixedAmount! > 0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -309,11 +355,30 @@ class _CategoryAccordion extends StatelessWidget {
                       Text(category.emoji, style: const TextStyle(fontSize: 20)),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(category.name, style: WoniTextStyles.body.copyWith(color: textColor)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(category.name, style: WoniTextStyles.body.copyWith(color: textColor)),
+                            if (hasFixed)
+                              Row(
+                                children: [
+                                  Icon(Icons.lock_outline_rounded, size: 10, color: textColor3),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    S.fixedAmountLabel,
+                                    style: WoniTextStyles.bodySecondary.copyWith(
+                                      color: textColor3,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
                       ),
-                      if (total > 0)
+                      if (displayTotal > 0)
                         Text(
-                          '${fmtKRW(total)}₩',
+                          '${fmtKRWFull(displayTotal)}₩',
                           style: WoniTextStyles.body.copyWith(color: textColor2),
                         ),
                       const SizedBox(width: 4),
@@ -326,7 +391,19 @@ class _CategoryAccordion extends StatelessWidget {
                   ),
                 ),
               ),
-              // Expanded content
+              // Subcategory chips (shown when expanded)
+              if (isExpanded && category.subcategories.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(48, 4, 12, 8),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: category.subcategories.map((sub) =>
+                      WoniChip(label: sub.name, variant: WoniChipVariant.neutral),
+                    ).toList(),
+                  ),
+                ),
+              // Expanded content — transactions (only if NOT a fixed-amount-only category)
               if (isExpanded && transactions.isNotEmpty)
                 ...transactions.map((tx) => Dismissible(
                       key: ValueKey(tx.id),
@@ -356,7 +433,7 @@ class _CategoryAccordion extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              '${tx.type == TransactionType.income ? '+' : '-'}${fmtKRW(tx.amount)}₩',
+                              '${tx.type == TransactionType.income ? '+' : '-'}${fmtKRWFull(tx.amount)}₩',
                               style: WoniTextStyles.body.copyWith(
                                 color: tx.type == TransactionType.income ? WoniColors.green : WoniColors.coral,
                                 fontSize: 13,
@@ -366,20 +443,20 @@ class _CategoryAccordion extends StatelessWidget {
                         ),
                       ),
                     )),
-              // Delete category (when expanded)
+              // Configure category (when expanded)
               if (isExpanded)
                 GestureDetector(
-                  onTap: onRemoveCat,
+                  onTap: onConfigure,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(48, 4, 12, 8),
+                    padding: const EdgeInsets.fromLTRB(48, 4, 12, 10),
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline, size: 14, color: WoniColors.coral.withValues(alpha: 0.6)),
+                        Icon(Icons.settings_outlined, size: 14, color: WoniColors.blue.withValues(alpha: 0.7)),
                         const SizedBox(width: 4),
                         Text(
-                          S.deleteCategory,
+                          S.configure,
                           style: WoniTextStyles.bodySecondary.copyWith(
-                            color: WoniColors.coral.withValues(alpha: 0.6),
+                            color: WoniColors.blue.withValues(alpha: 0.7),
                             fontSize: 11,
                           ),
                         ),

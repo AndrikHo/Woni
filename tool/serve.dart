@@ -1,8 +1,9 @@
 import 'dart:io';
 
 void main() async {
-  final server = await HttpServer.bind(InternetAddress.anyIPv4, 3000);
-  print('Serving on http://localhost:3000');
+  final port = int.tryParse(Platform.environment['PORT'] ?? '') ?? 3000;
+  final server = await HttpServer.bind(InternetAddress.anyIPv4, port);
+  print('Serving on http://localhost:$port');
 
   await for (final request in server) {
     var path = request.uri.path;
@@ -28,6 +29,7 @@ void main() async {
       };
       request.response.headers.set('Content-Type', contentType);
       request.response.headers.set('Access-Control-Allow-Origin', '*');
+      request.response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       await request.response.addStream(file.openRead());
     } else {
       // SPA fallback

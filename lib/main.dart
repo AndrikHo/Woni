@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:woni/core/theme/woni_theme.dart';
 import 'package:woni/core/state/app_state.dart';
-import 'package:woni/woni_shell.dart';
+import 'package:woni/features/splash/presentation/screens/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +38,7 @@ class _WoniAppState extends State<WoniApp> {
           theme: WoniTheme.light(),
           darkTheme: WoniTheme.dark(),
           themeMode: _appState.themeMode,
-          home: const WoniShell(),
+          home: const SplashScreen(),
         ),
       ),
     );

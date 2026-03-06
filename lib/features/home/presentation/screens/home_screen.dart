@@ -16,7 +16,7 @@ class HomeScreen extends StatelessWidget {
     final textColor2 = isDark ? WoniColors.darkText2 : WoniColors.lightText2;
 
     return Scaffold(
-      backgroundColor: isDark ? WoniColors.darkBg : WoniColors.lightBg,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,23 +52,20 @@ class HomeScreen extends StatelessWidget {
                   const BlockContainer(),
                   Positioned(
                     bottom: WoniSpacing.lg,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: () => BlockAddSheet.show(context),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [WoniColors.blue, Color(0xFF7B6EF6)],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: WoniShadows.blue(),
+                    right: WoniSpacing.lg,
+                    child: GestureDetector(
+                      onTap: () => BlockAddSheet.show(context),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [WoniColors.blue, const Color(0xFF7B6EF6)],
                           ),
-                          child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                          shape: BoxShape.circle,
+                          boxShadow: WoniShadows.blue(),
                         ),
+                        child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
                       ),
                     ),
                   ),

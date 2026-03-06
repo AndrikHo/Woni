@@ -29,6 +29,11 @@ class S {
   static String get addTask     => _t({'ru': 'Добавить задачу...', 'ko': '할 일 추가...', 'en': 'Add task...'});
   static String get nextTip     => _t({'ru': 'Следующий', 'ko': '다음', 'en': 'Next'});
   static String get noTasks     => _t({'ru': 'Нет задач', 'ko': '할 일 없음', 'en': 'No tasks'});
+  static String get newTask     => _t({'ru': 'Новая задача', 'ko': '새 할 일', 'en': 'New task'});
+  static String get outOf       => _t({'ru': 'из', 'ko': '중', 'en': 'of'});
+  static String get completed   => _t({'ru': 'выполнено', 'ko': '완료', 'en': 'completed'});
+  static String get swipeHint   => _t({'ru': 'свайп', 'ko': '스와이프', 'en': 'swipe'});
+  static String get dragHint    => _t({'ru': 'перетащить', 'ko': '드래그', 'en': 'drag'});
   static String get financialTips => _t({'ru': 'Рекомендации', 'ko': '금융 팁', 'en': 'Tips'});
 
   // ── AI input ────────────────────────────────────────────────────────────────
@@ -60,9 +65,11 @@ class S {
   static String get estimatedPay => _t({'ru': 'Примерная зарплата', 'ko': '예상 급여', 'en': 'Estimated pay'});
   static String get basePay     => _t({'ru': 'Базовая', 'ko': '기본', 'en': 'Base'});
   static String get bonusPay    => _t({'ru': 'Бонус', 'ko': '보너스', 'en': 'Bonus'});
-  static String get totalPay    => _t({'ru': 'Итого', 'ko': '합계', 'en': 'Total'});
+  static String get totalPay    => _t({'ru': 'Итог', 'ko': '합계', 'en': 'Total'});
   static String get shiftsCount => _t({'ru': 'Смены', 'ko': '근무', 'en': 'Shifts'});
   static String get hoursWorked => _t({'ru': 'Часы', 'ko': '시간', 'en': 'Hours'});
+  static String get overtimeHours => _t({'ru': 'Переработка', 'ko': '연장', 'en': 'Overtime'});
+  static String get nightHours    => _t({'ru': 'Ночные', 'ko': '야간', 'en': 'Night'});
   static String get presets     => _t({'ru': 'Пресеты', 'ko': '프리셋', 'en': 'Presets'});
   static String get presetSettings => _t({'ru': 'Настройки пресетов', 'ko': '프리셋 설정', 'en': 'Preset settings'});
   static String get juyeok      => _t({'ru': 'Отпускные', 'ko': '주휴수당', 'en': 'Weekly holiday pay'});
@@ -84,6 +91,16 @@ class S {
   static String get nightRate    => _t({'ru': 'Коэфф. ночной', 'ko': '야간 수당 배율', 'en': 'Night rate'});
   static String get fixedDailyAmt => _t({'ru': 'Фикс. сумма/день', 'ko': '일당 고정 금액', 'en': 'Fixed daily amt'});
   static String get fixedAmtHint => _t({'ru': 'Оставьте пустым для ручного ввода', 'ko': '수동 입력시 비워두세요', 'en': 'Leave empty for manual input'});
+
+  // Pay modes
+  static String get payMode         => _t({'ru': 'Тип оплаты', 'ko': '급여 방식', 'en': 'Pay mode'});
+  static String get payModeHourly   => _t({'ru': 'Почасовая', 'ko': '시급제', 'en': 'Hourly'});
+  static String get payModeMonthly  => _t({'ru': 'Фикс/мес', 'ko': '월급제', 'en': 'Monthly'});
+  static String get payModeDaily    => _t({'ru': 'Фикс/день', 'ko': '일당제', 'en': 'Daily'});
+  static String get payModeManual   => _t({'ru': 'Вручную', 'ko': '수동', 'en': 'Manual'});
+  static String get fixedMonthlyAmt => _t({'ru': 'Ежемесячная сумма', 'ko': '월급', 'en': 'Monthly amount'});
+  static String get monthlyHint     => _t({'ru': 'Делится на 22 рабочих дня', 'ko': '22일 기준 나눔', 'en': 'Divided by 22 work days'});
+  static String get manualEntryHint => _t({'ru': 'Сумма вводится при назначении смены в календаре', 'ko': '캘린더에서 근무 배정 시 금액 입력', 'en': 'Enter amount when assigning shift in calendar'});
   static String get from         => _t({'ru': 'с', 'ko': '부터', 'en': 'from'});
   static String get to           => _t({'ru': 'до', 'ko': '까지', 'en': 'to'});
   static String get multiplier   => _t({'ru': '×', 'ko': '×', 'en': '×'});
@@ -116,6 +133,15 @@ class S {
   static String get selectEmoji    => _t({'ru': 'Эмодзи', 'ko': '이모지', 'en': 'Emoji'});
   static String get selectColor    => _t({'ru': 'Цвет', 'ko': '색상', 'en': 'Color'});
 
+  static String get configure     => _t({'ru': 'Настроить', 'ko': '설정', 'en': 'Configure'});
+  static String get fixedAmountLabel => _t({'ru': 'Фикс. сумма', 'ko': '고정 금액', 'en': 'Fixed amount'});
+  static String get fixedAmountDesc  => _t({
+    'ru': 'Сумма автоматически учитывается каждый месяц',
+    'ko': '매월 자동으로 포함되는 금액',
+    'en': 'Amount automatically included every month',
+  });
+  static String get configureCat => _t({'ru': 'Настроить категорию', 'ko': '카테고리 설정', 'en': 'Configure category'});
+
   // Category names
   static String get catFood      => _t({'ru': 'Еда', 'ko': '식비', 'en': 'Food'});
   static String get catTransport => _t({'ru': 'Транспорт', 'ko': '교통', 'en': 'Transport'});
@@ -136,6 +162,11 @@ class S {
   static String get cancel         => _t({'ru': 'Отмена', 'ko': '취소', 'en': 'Cancel'});
   static String get delete         => _t({'ru': 'Удалить', 'ko': '삭제', 'en': 'Delete'});
   static String get edit           => _t({'ru': 'Редактировать', 'ko': '수정', 'en': 'Edit'});
+  static String get fieldRequired  => _t({'ru': 'Обязательное поле', 'ko': '필수 항목', 'en': 'Required field'});
+
+  // ── Themes ─────────────────────────────────────────────────────────────────
+  static String get themes      => _t({'ru': 'Темы', 'ko': '테마', 'en': 'Themes'});
+  static String get selectTheme => _t({'ru': 'Выбрать тему', 'ko': '테마 선택', 'en': 'Select theme'});
 
   // ── Account ─────────────────────────────────────────────────────────────────
   static String get profile     => _t({'ru': 'Профиль', 'ko': '프로필', 'en': 'Profile'});
@@ -150,6 +181,29 @@ class S {
   static String get stats       => _t({'ru': 'Статистика', 'ko': '통계', 'en': 'Statistics'});
   static String get transactions => _t({'ru': 'Записи', 'ko': '거래', 'en': 'Transactions'});
   static String get notifications => _t({'ru': 'Уведомления', 'ko': '알림', 'en': 'Notifications'});
+
+  // ── Balance carry-over ─────────────────────────────────────────────────────
+  static String get carryOver         => _t({'ru': 'Перенос остатка', 'ko': '잔액 이월', 'en': 'Balance carry-over'});
+  static String get carryOverAuto     => _t({'ru': 'Авто', 'ko': '자동', 'en': 'Auto'});
+  static String get carryOverManual   => _t({'ru': 'Вручную', 'ko': '수동', 'en': 'Manual'});
+  static String get carryOverBilling  => _t({'ru': 'По дате', 'ko': '결제일', 'en': 'By date'});
+  static String get billingDay        => _t({'ru': 'День расчёта', 'ko': '결제일', 'en': 'Billing day'});
+  static String get carryOverDesc     => _t({
+    'ru': 'Остаток автоматически переносится на следующий месяц',
+    'ko': '잔액이 자동으로 다음 달로 이월됩니다',
+    'en': 'Balance automatically carries over to next month',
+  });
+  static String get carryOverManualDesc => _t({
+    'ru': 'Нажмите кнопку для переноса остатка',
+    'ko': '잔액 이월을 위해 버튼을 누르세요',
+    'en': 'Press button to carry over balance',
+  });
+  static String get carryOverBillingDesc => _t({
+    'ru': 'Расходы сбрасываются в выбранный день месяца',
+    'ko': '선택한 날짜에 지출이 초기화됩니다',
+    'en': 'Expenses reset on the selected day of month',
+  });
+  static String get transferBalance => _t({'ru': 'Перенести', 'ko': '이월', 'en': 'Transfer'});
 
   // ── Confirmations ───────────────────────────────────────────────────────────
   static String get confirmReset => _t({
@@ -175,6 +229,71 @@ class S {
     'ko': '${d}일 전',
     'en': '$d days ago',
   });
+
+  // ── Onboarding ─────────────────────────────────────────────────────────────
+  static String get onboardSkip     => _t({'ru': 'Пропустить', 'ko': '건너뛰기', 'en': 'Skip'});
+  static String get onboardContinue => _t({'ru': 'Продолжить →', 'ko': '계속 →', 'en': 'Continue →'});
+  static String get onboardStart    => _t({'ru': 'Начать →', 'ko': '시작하기 →', 'en': 'Get started →'});
+  static String get onboardGoogleBtn => _t({'ru': 'Войти через Google', 'ko': 'Google로 시작하기', 'en': 'Sign in with Google'});
+
+  static String get ob1Title => _t({'ru': 'Войди через Google', 'ko': 'Google로 시작하기', 'en': 'Sign in with Google'});
+  static String get ob1Sub => _t({
+    'ru': 'Контролируй расходы.\nБыстро и просто вместе с Woni.',
+    'ko': '지출을 관리하세요.\nWoni와 함께 빠르고 간편하게.',
+    'en': 'Control your expenses.\nQuick and simple with Woni.',
+  });
+  static String get ob2Title => _t({'ru': 'Выбери язык', 'ko': '언어를 선택하세요', 'en': 'Choose language'});
+  static String get ob2Sub => _t({
+    'ru': 'Русский · 한국어 · English\nМожно поменять в любой момент.',
+    'ko': '한국어 · Русский · English\n언제든지 변경할 수 있습니다.',
+    'en': 'English · 한국어 · Русский\nYou can change it anytime.',
+  });
+  static String get ob3Title => _t({'ru': 'Настрой зарплату', 'ko': '급여 설정', 'en': 'Set up salary'});
+  static String get ob3Sub => _t({
+    'ru': 'Укажи ставку или оклад.\nМы посчитаем всё автоматически.',
+    'ko': '시급 또는 월급을 설정하세요.\n자동으로 계산합니다.',
+    'en': 'Set your hourly rate or monthly salary.\nWe\'ll calculate everything.',
+  });
+  static String get ob4Title => _t({'ru': 'Первая запись', 'ko': '첫 번째 기록', 'en': 'First entry'});
+  static String get ob4Sub => _t({
+    'ru': 'Просто напиши текстом:\n"4500 кофе вчера" — AI сам разберёт.',
+    'ko': '텍스트로 입력하세요:\n"4500 커피 어제" — AI가 분석합니다.',
+    'en': 'Just type:\n"4500 coffee yesterday" — AI will parse it.',
+  });
+  static String get ob30daysFree => _t({'ru': '30 дней бесплатно', 'ko': '30일 무료 체험', 'en': '30 days free'});
+  static String get obCardLater => _t({'ru': 'Карта только потом', 'ko': '카드는 나중에', 'en': 'Card needed later'});
+  static String get obHourly  => _t({'ru': 'Почасовая', 'ko': '시급제', 'en': 'Hourly'});
+  static String get obMonthly => _t({'ru': 'Месячный', 'ko': '월급제', 'en': 'Monthly'});
+  static String get obManual  => _t({'ru': 'Вручную', 'ko': '수동', 'en': 'Manual'});
+  static String get obTryNow  => _t({'ru': 'Попробуй сейчас', 'ko': '지금 시도해보세요', 'en': 'Try it now'});
+  static String get obExamples => _t({'ru': 'Примеры:', 'ko': '예시:', 'en': 'Examples:'});
+  static String get obAiUnderstood => _t({'ru': 'AI понял!', 'ko': 'AI가 이해했습니다!', 'en': 'AI understood!'});
+  static String get obJuyeokCalc => _t({'ru': '주휴수당 расчёт', 'ko': '주휴수당 계산', 'en': 'Weekly holiday pay'});
+  static String get obMinWageHint => _t({'ru': '2025 мин. ставка: 10,030₩/ч', 'ko': '2025 최저시급: 10,030₩/시간', 'en': '2025 min wage: 10,030₩/hr'});
+  static String get obManualHint => _t({'ru': 'Вводи сумму вручную каждую смену', 'ko': '매 근무마다 수동으로 입력', 'en': 'Enter amount manually each shift'});
+
+  // ── Splash / Auth ──────────────────────────────────────────────────────────
+  static String get splashTagline1 => _t({
+    'ru': 'контролируй расходы',
+    'ko': '지출을 관리하세요',
+    'en': 'control your expenses',
+  });
+  static String get splashTagline2 => _t({
+    'ru': 'быстро и просто вместе с Woni',
+    'ko': 'Woni와 함께 빠르고 간편하게',
+    'en': 'quick and simple with Woni',
+  });
+  static String get authGoogleBtn => _t({
+    'ru': 'Войти через Google',
+    'ko': 'Google로 시작하기',
+    'en': 'Sign in with Google',
+  });
+  static String get authBiometric => _t({
+    'ru': 'Вход по Face ID / отпечатку',
+    'ko': 'Face ID / 지문으로 로그인',
+    'en': 'Sign in with Face ID / Fingerprint',
+  });
+  static String get authOr => _t({'ru': 'или', 'ko': '또는', 'en': 'or'});
 
   // ── Month names ─────────────────────────────────────────────────────────────
   static String monthName(int m) {

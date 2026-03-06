@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:woni/core/constants/models.dart';
 import 'package:woni/core/l10n/strings.dart';
 import 'package:woni/core/state/app_state.dart';
+import 'package:woni/core/theme/app_themes.dart';
 import 'package:woni/core/theme/woni_theme.dart';
 import 'package:woni/core/theme/woni_widgets.dart';
+import 'package:woni/features/account/presentation/widgets/theme_picker_sheet.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -18,7 +20,7 @@ class AccountScreen extends StatelessWidget {
     final border = isDark ? WoniColors.darkBorder : WoniColors.lightBorder;
 
     return Scaffold(
-      backgroundColor: isDark ? WoniColors.darkBg : WoniColors.lightBg,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(WoniSpacing.lg),
@@ -71,35 +73,49 @@ class AccountScreen extends StatelessWidget {
               // ── Language ──
               _SectionTitle(S.language),
               const SizedBox(height: WoniSpacing.sm),
-              WoniCard(
-                color: bg,
-                padding: const EdgeInsets.all(WoniSpacing.sm),
-                child: Row(
-                  children: [
-                    for (final loc in AppLocale.values) ...[
-                      if (loc != AppLocale.values.first) const SizedBox(width: 4),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => AppStateScope.read(context).setLocale(loc),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: state.locale == loc ? WoniColors.blue : Colors.transparent,
-                              borderRadius: WoniRadius.sm,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              loc == AppLocale.ru ? 'Русский' : loc == AppLocale.ko ? '한국어' : 'English',
-                              style: WoniTextStyles.body.copyWith(
-                                color: state.locale == loc ? Colors.white : textColor2,
-                              ),
-                            ),
+              SizedBox(
+                height: 38,
+                child: WoniScopeToggle(
+                  selected: AppLocale.values.indexOf(state.locale),
+                  onChanged: (i) => AppStateScope.read(context).setLocale(AppLocale.values[i]),
+                  labels: const ['Русский', '한국어', 'English'],
+                ),
+              ),
+              const SizedBox(height: WoniSpacing.xxl),
+
+              // ── Theme ──
+              _SectionTitle(S.themes),
+              const SizedBox(height: WoniSpacing.sm),
+              GestureDetector(
+                onTap: () => ThemePickerSheet.show(context),
+                child: WoniCard(
+                  color: bg,
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      // Preview strip of current theme
+                      ClipRRect(
+                        borderRadius: WoniRadius.sm,
+                        child: SizedBox(
+                          width: 80,
+                          height: 28,
+                          child: Row(
+                            children: WoniColors.current.previewColors
+                                .map((c) => Expanded(child: Container(color: c)))
+                                .toList(),
                           ),
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          WoniColors.current.name,
+                          style: WoniTextStyles.body.copyWith(color: textColor),
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: textColor2, size: 20),
                     ],
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(height: WoniSpacing.xxl),
@@ -155,6 +171,80 @@ class AccountScreen extends StatelessWidget {
                       textColor: textColor,
                       trailing: Text('10,030₩/h', style: WoniTextStyles.bodySecondary.copyWith(color: textColor2)),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: WoniSpacing.xxl),
+
+              // ── Balance carry-over ──
+              _SectionTitle(S.carryOver),
+              const SizedBox(height: WoniSpacing.sm),
+              WoniCard(
+                color: bg,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.sync_rounded, size: 20, color: WoniColors.blue),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(S.carryOver, style: WoniTextStyles.body.copyWith(color: textColor)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Mode selector
+                    SizedBox(
+                      height: 38,
+                      child: WoniScopeToggle(
+                        selected: CarryOverMode.values.indexOf(state.carryOverMode),
+                        onChanged: (i) => AppStateScope.read(context)
+                            .setCarryOverMode(CarryOverMode.values[i]),
+                        labels: [S.carryOverAuto, S.carryOverManual, S.carryOverBilling],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Description
+                    Text(
+                      switch (state.carryOverMode) {
+                        CarryOverMode.auto => S.carryOverDesc,
+                        CarryOverMode.manual => S.carryOverManualDesc,
+                        CarryOverMode.byBillingDate => S.carryOverBillingDesc,
+                      },
+                      style: WoniTextStyles.bodySecondary.copyWith(
+                        color: textColor2,
+                        fontSize: 11,
+                      ),
+                    ),
+                    // Manual mode: transfer button
+                    if (state.carryOverMode == CarryOverMode.manual) ...[
+                      const SizedBox(height: 12),
+                      WoniButton(
+                        label: '${S.transferBalance} (${fmtKRWFull(state.monthBalance)}₩)',
+                        onTap: () => AppStateScope.read(context).triggerManualCarryOver(),
+                        small: true,
+                        variant: WoniButtonVariant.ghost,
+                      ),
+                    ],
+                    // Billing date mode: day picker
+                    if (state.carryOverMode == CarryOverMode.byBillingDate) ...[
+                      const SizedBox(height: 12),
+                      Divider(height: 1, color: border),
+                      const SizedBox(height: 12),
+                      _SettingRow(
+                        icon: Icons.calendar_today_rounded,
+                        label: S.billingDay,
+                        textColor: textColor,
+                        trailing: _BillingDayPicker(
+                          currentDay: state.billingDay,
+                          textColor: textColor,
+                          textColor2: textColor2,
+                          isDark: isDark,
+                          onChanged: (day) => AppStateScope.read(context).setBillingDay(day),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -256,6 +346,122 @@ class _StatItem extends StatelessWidget {
           color: isDark ? WoniColors.darkText3 : WoniColors.lightText3,
         )),
       ],
+    );
+  }
+}
+
+class _BillingDayPicker extends StatelessWidget {
+  const _BillingDayPicker({
+    required this.currentDay,
+    required this.textColor,
+    required this.textColor2,
+    required this.isDark,
+    required this.onChanged,
+  });
+
+  final int currentDay;
+  final Color textColor;
+  final Color textColor2;
+  final bool isDark;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showDayPicker(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDark ? WoniColors.darkSurface2 : WoniColors.lightSurface2,
+          borderRadius: WoniRadius.sm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$currentDay',
+              style: WoniTextStyles.body.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.unfold_more, size: 16, color: textColor2),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDayPicker(BuildContext context) {
+    final bg = isDark ? WoniColors.darkSurface : WoniColors.lightSurface;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(WoniSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: textColor2,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: WoniSpacing.lg),
+            Text(
+              S.billingDay,
+              style: WoniTextStyles.heading2.copyWith(color: textColor),
+            ),
+            const SizedBox(height: WoniSpacing.lg),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(31, (i) {
+                final day = i + 1;
+                final isSelected = day == currentDay;
+                return GestureDetector(
+                  onTap: () {
+                    onChanged(day);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? WoniColors.blue.withValues(alpha: 0.15)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: isSelected
+                          ? Border.all(color: WoniColors.blue, width: 2)
+                          : null,
+                    ),
+                    child: Text(
+                      '$day',
+                      style: WoniTextStyles.body.copyWith(
+                        color: isSelected ? WoniColors.blue : textColor,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: WoniSpacing.xxxl),
+          ],
+        ),
+      ),
     );
   }
 }

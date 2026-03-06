@@ -60,7 +60,14 @@ class ShiftPresetSettings extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Text(preset.emoji, style: const TextStyle(fontSize: 24)),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: preset.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -69,14 +76,14 @@ class ShiftPresetSettings extends StatelessWidget {
                             Text(preset.name, style: WoniTextStyles.body.copyWith(color: textColor)),
                             const SizedBox(height: 2),
                             Text(
-                              '${_timeStr(preset.defaultStart)}–${_timeStr(preset.defaultEnd)} · ${fmtKRWFull(preset.hourlyRate)}₩/${S.hoursWorked}',
+                              switch (preset.payMode) {
+                                PayMode.hourly => '${_timeStr(preset.defaultStart)}–${_timeStr(preset.defaultEnd)} · ${fmtKRWFull(preset.hourlyRate)}₩/${S.hoursWorked}',
+                                PayMode.fixedMonthly => '${_timeStr(preset.defaultStart)}–${_timeStr(preset.defaultEnd)} · ${fmtKRWFull(preset.fixedMonthlyAmount ?? 0)}₩/${S.payModeMonthly}',
+                                PayMode.fixedDaily => '${_timeStr(preset.defaultStart)}–${_timeStr(preset.defaultEnd)} · ${fmtKRWFull(preset.fixedDailyAmount ?? 0)}₩/${S.payModeDaily}',
+                                PayMode.manualDaily => '${_timeStr(preset.defaultStart)}–${_timeStr(preset.defaultEnd)} · ${S.payModeManual}',
+                              },
                               style: WoniTextStyles.bodySecondary.copyWith(color: textColor2, fontSize: 11),
                             ),
-                            if (preset.fixedDailyAmount != null)
-                              Text(
-                                '${S.fixedDailyAmt}: ${fmtKRWFull(preset.fixedDailyAmount!)}₩',
-                                style: WoniTextStyles.bodySecondary.copyWith(color: WoniColors.green, fontSize: 11),
-                              ),
                           ],
                         ),
                       ),
@@ -134,22 +141,18 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
   late final TextEditingController _nightMultCtrl;
   late final TextEditingController _fixedAmtCtrl;
   late final TextEditingController _breakCtrl;
+  late final TextEditingController _monthlyCtrl;
 
-  late String _emoji;
   late Color _color;
   late TimeOfDay _start;
   late TimeOfDay _end;
   late TimeOfDay _nightStart;
   late TimeOfDay _nightEnd;
   late ShiftType _shiftType;
+  late PayMode _payMode;
+  bool _nameError = false;
 
   bool get _isEdit => widget.preset != null;
-
-  static const _emojis = [
-    '🌅', '🌙', '⏰', '🏢', '🏪', '☕', '🍽', '🔧', '💼', '🚗',
-    '📦', '🎭', '🏥', '🎓', '🛒', '⚡', '🌃', '🌆', '🌇', '🏠',
-    '🍕', '🛠', '📱', '🎯', '🧑‍💻', '🏋️', '🎵', '📐', '🚀', '🔬',
-  ];
 
   static const _colors = [
     Color(0xFF4F8EF7), Color(0xFF34C579), Color(0xFFFF6B6B), Color(0xFF7B6EF6),
@@ -167,13 +170,14 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
     _nightMultCtrl = TextEditingController(text: '${p?.nightMultiplier ?? 0.5}');
     _fixedAmtCtrl = TextEditingController(text: p?.fixedDailyAmount != null ? '${p!.fixedDailyAmount}' : '');
     _breakCtrl = TextEditingController(text: '${p?.breakMinutes ?? 60}');
-    _emoji = p?.emoji ?? '🌅';
+    _monthlyCtrl = TextEditingController(text: p?.fixedMonthlyAmount != null ? '${p!.fixedMonthlyAmount}' : '');
     _color = p?.color ?? const Color(0xFF4F8EF7);
     _start = p?.defaultStart ?? const TimeOfDay(hour: 9, minute: 0);
     _end = p?.defaultEnd ?? const TimeOfDay(hour: 18, minute: 0);
     _nightStart = p?.nightBonusStart ?? const TimeOfDay(hour: 22, minute: 0);
     _nightEnd = p?.nightBonusEnd ?? const TimeOfDay(hour: 6, minute: 0);
     _shiftType = p?.shiftType ?? ShiftType.regular;
+    _payMode = p?.payMode ?? PayMode.hourly;
   }
 
   @override
@@ -184,21 +188,30 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
     _nightMultCtrl.dispose();
     _fixedAmtCtrl.dispose();
     _breakCtrl.dispose();
+    _monthlyCtrl.dispose();
     super.dispose();
   }
 
   void _save() {
     final name = _nameCtrl.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty) {
+      setState(() => _nameError = true);
+      return;
+    }
+    if (!mounted) return;
     final state = AppStateScope.read(context);
 
-    final fixedText = _fixedAmtCtrl.text.trim();
-    final fixedAmt = fixedText.isNotEmpty ? int.tryParse(fixedText) : null;
+    final fixedDaily = _payMode == PayMode.fixedDaily
+        ? int.tryParse(_fixedAmtCtrl.text.trim())
+        : null;
+    final fixedMonthly = _payMode == PayMode.fixedMonthly
+        ? int.tryParse(_monthlyCtrl.text.trim())
+        : null;
 
     final preset = ShiftPreset(
       id: widget.preset?.id ?? 'preset_${state.nextId()}',
       name: name,
-      emoji: _emoji,
+      emoji: '',
       color: _color,
       defaultStart: _start,
       defaultEnd: _end,
@@ -209,7 +222,9 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
       nightBonusStart: _nightStart,
       nightBonusEnd: _nightEnd,
       nightMultiplier: double.tryParse(_nightMultCtrl.text) ?? 0.5,
-      fixedDailyAmount: fixedAmt,
+      payMode: _payMode,
+      fixedDailyAmount: fixedDaily,
+      fixedMonthlyAmount: fixedMonthly,
     );
 
     if (_isEdit) {
@@ -217,7 +232,7 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
     } else {
       state.addPreset(preset);
     }
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   Future<void> _pickTime(TimeOfDay initial, ValueChanged<TimeOfDay> onPick) async {
@@ -280,29 +295,6 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Emoji picker ─────────────────────────────────────
-                  Text(S.presetIcon, style: WoniTextStyles.caption.copyWith(color: textColor3, letterSpacing: 0.5)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: _emojis.map((e) => GestureDetector(
-                      onTap: () => setState(() => _emoji = e),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _emoji == e ? WoniColors.blue.withValues(alpha: 0.15) : surface2,
-                          borderRadius: BorderRadius.circular(8),
-                          border: _emoji == e ? Border.all(color: WoniColors.blue, width: 2) : null,
-                        ),
-                        child: Text(e, style: const TextStyle(fontSize: 20)),
-                      ),
-                    )).toList(),
-                  ),
-                  const SizedBox(height: WoniSpacing.lg),
-
                   // ── Color picker ──────────────────────────────────────
                   Text(S.selectColor, style: WoniTextStyles.caption.copyWith(color: textColor3, letterSpacing: 0.5)),
                   const SizedBox(height: 8),
@@ -325,60 +317,28 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
                   const SizedBox(height: WoniSpacing.lg),
 
                   // ── Name ──────────────────────────────────────────────
-                  _FieldLabel(S.presetName, textColor3),
+                  _FieldLabel(S.presetName, _nameError ? WoniColors.coral : textColor3),
                   const SizedBox(height: 6),
-                  _StyledTextField(controller: _nameCtrl, isDark: isDark, hint: 'Дневная'),
-                  const SizedBox(height: WoniSpacing.lg),
-
-                  // ── Work hours ─────────────────────────────────────────
-                  _FieldLabel(S.workHours, textColor3),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(child: _TimeButton(label: _fmt(_start), onTap: () => _pickTime(_start, (t) => _start = t), isDark: isDark)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text('—', style: WoniTextStyles.body.copyWith(color: textColor2)),
+                  _StyledTextField(
+                    controller: _nameCtrl,
+                    isDark: isDark,
+                    hint: 'Дневная',
+                    hasError: _nameError,
+                    onChanged: (_) {
+                      if (_nameError) setState(() => _nameError = false);
+                    },
+                  ),
+                  if (_nameError)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        S.fieldRequired,
+                        style: WoniTextStyles.bodySecondary.copyWith(
+                          color: WoniColors.coral,
+                          fontSize: 11,
+                        ),
                       ),
-                      Expanded(child: _TimeButton(label: _fmt(_end), onTap: () => _pickTime(_end, (t) => _end = t), isDark: isDark)),
-                    ],
-                  ),
-                  const SizedBox(height: WoniSpacing.md),
-
-                  // Break minutes
-                  _FieldLabel('${S.breakTime} (${S.minutes})', textColor3),
-                  const SizedBox(height: 6),
-                  _StyledTextField(controller: _breakCtrl, isDark: isDark, hint: '60', keyboardType: TextInputType.number, width: 80),
-                  const SizedBox(height: WoniSpacing.lg),
-
-                  // ── Hourly rate ────────────────────────────────────────
-                  _FieldLabel(S.minWageKR, textColor3),
-                  const SizedBox(height: 6),
-                  _StyledTextField(controller: _rateCtrl, isDark: isDark, hint: '10030', keyboardType: TextInputType.number, suffix: '₩'),
-                  const SizedBox(height: WoniSpacing.lg),
-
-                  // ── Overtime multiplier ────────────────────────────────
-                  _FieldLabel(S.overtimeRate, textColor3),
-                  const SizedBox(height: 6),
-                  _StyledTextField(controller: _overtimeCtrl, isDark: isDark, hint: '1.5', keyboardType: const TextInputType.numberWithOptions(decimal: true), suffix: '×'),
-                  const SizedBox(height: WoniSpacing.lg),
-
-                  // ── Night shift hours ──────────────────────────────────
-                  _FieldLabel(S.nightShiftHrs, textColor3),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(child: _TimeButton(label: '${S.from} ${_fmt(_nightStart)}', onTap: () => _pickTime(_nightStart, (t) => _nightStart = t), isDark: isDark)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _TimeButton(label: '${S.to} ${_fmt(_nightEnd)}', onTap: () => _pickTime(_nightEnd, (t) => _nightEnd = t), isDark: isDark)),
-                    ],
-                  ),
-                  const SizedBox(height: WoniSpacing.md),
-
-                  // Night multiplier
-                  _FieldLabel(S.nightRate, textColor3),
-                  const SizedBox(height: 6),
-                  _StyledTextField(controller: _nightMultCtrl, isDark: isDark, hint: '0.5', keyboardType: const TextInputType.numberWithOptions(decimal: true), suffix: '×'),
+                    ),
                   const SizedBox(height: WoniSpacing.lg),
 
                   // ── Shift type ─────────────────────────────────────────
@@ -411,12 +371,128 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
                   ),
                   const SizedBox(height: WoniSpacing.lg),
 
-                  // ── Fixed daily amount ─────────────────────────────────
-                  _FieldLabel(S.fixedDailyAmt, textColor3),
-                  const SizedBox(height: 4),
-                  Text(S.fixedAmtHint, style: WoniTextStyles.bodySecondary.copyWith(color: textColor3, fontSize: 10)),
+                  // ── Work hours ─────────────────────────────────────────
+                  _FieldLabel(S.workHours, textColor3),
                   const SizedBox(height: 6),
-                  _StyledTextField(controller: _fixedAmtCtrl, isDark: isDark, hint: '', keyboardType: TextInputType.number, suffix: '₩'),
+                  Row(
+                    children: [
+                      Expanded(child: _TimeButton(label: _fmt(_start), onTap: () => _pickTime(_start, (t) => _start = t), isDark: isDark)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('—', style: WoniTextStyles.body.copyWith(color: textColor2)),
+                      ),
+                      Expanded(child: _TimeButton(label: _fmt(_end), onTap: () => _pickTime(_end, (t) => _end = t), isDark: isDark)),
+                    ],
+                  ),
+                  const SizedBox(height: WoniSpacing.md),
+
+                  // Break minutes
+                  _FieldLabel('${S.breakTime} (${S.minutes})', textColor3),
+                  const SizedBox(height: 6),
+                  _StyledTextField(controller: _breakCtrl, isDark: isDark, hint: '60', keyboardType: TextInputType.number, width: 80),
+                  const SizedBox(height: WoniSpacing.lg),
+
+                  // ── Pay mode selector ─────────────────────────────────
+                  _FieldLabel(S.payMode, textColor3),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: PayMode.values.map((mode) {
+                      final isSelected = _payMode == mode;
+                      return GestureDetector(
+                        onTap: () => setState(() => _payMode = mode),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isSelected ? WoniColors.blue.withValues(alpha: 0.15) : surface2,
+                            borderRadius: BorderRadius.circular(8),
+                            border: isSelected ? Border.all(color: WoniColors.blue, width: 1.5) : null,
+                          ),
+                          child: Text(
+                            _payModeName(mode),
+                            style: WoniTextStyles.bodySecondary.copyWith(
+                              color: isSelected ? WoniColors.blue : textColor2,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: WoniSpacing.lg),
+
+                  // ── MODE: Hourly — Korean standard ────────────────────
+                  if (_payMode == PayMode.hourly) ...[
+                    // Hourly rate
+                    _FieldLabel(S.minWageKR, textColor3),
+                    const SizedBox(height: 6),
+                    _StyledTextField(controller: _rateCtrl, isDark: isDark, hint: '10030', keyboardType: TextInputType.number, suffix: '₩'),
+                    const SizedBox(height: WoniSpacing.lg),
+
+                    // Overtime multiplier
+                    _FieldLabel(S.overtimeRate, textColor3),
+                    const SizedBox(height: 6),
+                    _StyledTextField(controller: _overtimeCtrl, isDark: isDark, hint: '1.5', keyboardType: const TextInputType.numberWithOptions(decimal: true), suffix: '×'),
+                    const SizedBox(height: WoniSpacing.lg),
+
+                    // Night shift hours
+                    _FieldLabel(S.nightShiftHrs, textColor3),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(child: _TimeButton(label: '${S.from} ${_fmt(_nightStart)}', onTap: () => _pickTime(_nightStart, (t) => _nightStart = t), isDark: isDark)),
+                        const SizedBox(width: 8),
+                        Expanded(child: _TimeButton(label: '${S.to} ${_fmt(_nightEnd)}', onTap: () => _pickTime(_nightEnd, (t) => _nightEnd = t), isDark: isDark)),
+                      ],
+                    ),
+                    const SizedBox(height: WoniSpacing.md),
+
+                    // Night multiplier
+                    _FieldLabel(S.nightRate, textColor3),
+                    const SizedBox(height: 6),
+                    _StyledTextField(controller: _nightMultCtrl, isDark: isDark, hint: '0.5', keyboardType: const TextInputType.numberWithOptions(decimal: true), suffix: '×'),
+                  ],
+
+                  // ── MODE: Fixed monthly ───────────────────────────────
+                  if (_payMode == PayMode.fixedMonthly) ...[
+                    _FieldLabel(S.fixedMonthlyAmt, textColor3),
+                    const SizedBox(height: 4),
+                    Text(S.monthlyHint, style: WoniTextStyles.bodySecondary.copyWith(color: textColor3, fontSize: 10)),
+                    const SizedBox(height: 6),
+                    _StyledTextField(controller: _monthlyCtrl, isDark: isDark, hint: '2500000', keyboardType: TextInputType.number, suffix: '₩'),
+                  ],
+
+                  // ── MODE: Fixed daily ─────────────────────────────────
+                  if (_payMode == PayMode.fixedDaily) ...[
+                    _FieldLabel(S.fixedDailyAmt, textColor3),
+                    const SizedBox(height: 6),
+                    _StyledTextField(controller: _fixedAmtCtrl, isDark: isDark, hint: '100000', keyboardType: TextInputType.number, suffix: '₩'),
+                  ],
+
+                  // ── MODE: Manual daily ────────────────────────────────
+                  if (_payMode == PayMode.manualDaily) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: surface2,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_note_rounded, color: textColor3, size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              S.manualEntryHint,
+                              style: WoniTextStyles.bodySecondary.copyWith(color: textColor2, fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: WoniSpacing.xxxl),
                 ],
               ),
@@ -433,6 +509,13 @@ class _ShiftPresetEditorState extends State<ShiftPresetEditor> {
     ShiftType.holiday         => S.shiftHoliday,
     ShiftType.overtime        => S.shiftOvertime,
     ShiftType.weekendOvertime => S.shiftWeekendOT,
+  };
+
+  String _payModeName(PayMode m) => switch (m) {
+    PayMode.hourly       => S.payModeHourly,
+    PayMode.fixedMonthly => S.payModeMonthly,
+    PayMode.fixedDaily   => S.payModeDaily,
+    PayMode.manualDaily  => S.payModeManual,
   };
 }
 
@@ -460,6 +543,8 @@ class _StyledTextField extends StatelessWidget {
     this.keyboardType,
     this.suffix,
     this.width,
+    this.hasError = false,
+    this.onChanged,
   });
   final TextEditingController controller;
   final bool isDark;
@@ -467,6 +552,8 @@ class _StyledTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? suffix;
   final double? width;
+  final bool hasError;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -479,6 +566,7 @@ class _StyledTextField extends StatelessWidget {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        onChanged: onChanged,
         style: WoniTextStyles.body.copyWith(color: textColor),
         decoration: InputDecoration(
           hintText: hint,
@@ -490,6 +578,22 @@ class _StyledTextField extends StatelessWidget {
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,
+          ),
+          enabledBorder: hasError
+              ? OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: WoniColors.coral, width: 1.5),
+                )
+              : OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: hasError ? WoniColors.coral : WoniColors.blue,
+              width: 1.5,
+            ),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           isDense: true,

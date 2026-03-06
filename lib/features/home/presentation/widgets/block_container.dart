@@ -73,35 +73,39 @@ class _BlockWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ReorderableDragStartListener(
-      index: index,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: WoniSpacing.sm),
-        child: Stack(
-          children: [
-            child,
-            Positioned(
-              top: 8,
-              right: 8,
-              child: GestureDetector(
-                onTap: () => AppStateScope.read(context).toggleBlockVisibility(blockId),
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.close,
-                    size: 14,
-                    color: isDark ? WoniColors.darkText3 : WoniColors.lightText3,
-                  ),
+    final handleColor = isDark ? WoniColors.darkText3 : WoniColors.lightText3;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: WoniSpacing.sm),
+      child: Stack(
+        children: [
+          // ── Block content (long-press drag still works on mobile) ──
+          ReorderableDelayedDragStartListener(
+            index: index,
+            child: child,
+          ),
+          // ── Close button (top-right) ──
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: () => AppStateScope.read(context).toggleBlockVisibility(blockId),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  Icons.close,
+                  size: 14,
+                  color: handleColor,
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

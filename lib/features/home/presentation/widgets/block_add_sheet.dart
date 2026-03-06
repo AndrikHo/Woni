@@ -107,7 +107,7 @@ class _BlockOption extends StatelessWidget {
               if (isVisible)
                 Text('✓', style: WoniTextStyles.body.copyWith(color: textColor3))
               else
-                const Icon(Icons.add_rounded, color: WoniColors.blue, size: 20),
+                Icon(Icons.add_rounded, color: WoniColors.blue, size: 20),
             ],
           ),
         ),

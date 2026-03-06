@@ -146,7 +146,7 @@ class _AIConfirmationSheetState extends State<AIConfirmationSheet> {
               width: 24, height: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                valueColor: const AlwaysStoppedAnimation(WoniColors.blue),
+                valueColor: AlwaysStoppedAnimation(WoniColors.blue),
               ),
             ),
             const SizedBox(height: 10),
